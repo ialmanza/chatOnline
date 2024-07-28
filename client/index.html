@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Online</title>
+
+  <script type="module">
+    import { io } from 'https://cdn.socket.io/4.3.2/socket.io.esm.min.js'
+
+    const getUsername = async () => {
+      const username = localStorage.getItem('username')
+      if (username) {
+        console.log(`User existed ${username}`)
+        return username
+      }
+
+      const res = await fetch('https://random-data-api.com/api/users/random_user')
+      const { username: randomUsername } = await res.json()
+
+      localStorage.setItem('username', randomUsername)
+      return randomUsername
+    }
+
+    const socket = io({
+      auth: {
+        username: await getUsername(),
+        serverOffset: 0
+      }
+    })
+
+    const form = document.getElementById('form')
+    const input = document.getElementById('input')
+    const messages = document.getElementById('messages')
+
+    socket.on('chat message', (msg, serverOffset, username) => {
+      const item = `<li>
+        <p>${msg}</p>
+        <small>${username}</small>
+      </li>`
+      messages.insertAdjacentHTML('beforeend', item)
+      socket.auth.serverOffset = serverOffset
+      // scroll to bottom of messages
+      messages.scrollTop = messages.scrollHeight
+    })
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault()
+
+      if (input.value) {
+        socket.emit('chat message', input.value)
+        input.value = ''
+      }
+    })
+  </script>
+
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+  
+    :root {
+      color-scheme: light dark;
+      --primary-color: #09f;
+      --primary-color-hover: #0cf;
+      --bg-color: #f9f9f9;
+      --text-color: #333;
+      --border-color: #ddd;
+    }
+  
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      display: grid;
+      place-content: center;
+      height: 100vh;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+    }
+  
+    #chat {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      width: 400px;
+      height: 600px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+  
+    #messages {
+      list-style-type: none;
+      margin: 0;
+      padding: 16px;
+      overflow-y: auto;
+      flex: 1;
+      background: #fff;
+    }
+  
+    #messages > li {
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      background: var(--bg-color);
+      color: var(--text-color);
+      word-wrap: break-word;
+      font-size: 14px;
+    }
+  
+    #messages > li:nth-child(odd) {
+      background: var(--primary-color);
+      color: #fff;
+    }
+  
+    #form {
+      display: flex;
+      padding: 8px;
+      border-top: 1px solid var(--border-color);
+      background: #fff;
+    }
+  
+    #input {
+      border-radius: 24px;
+      border: 1px solid var(--border-color);
+      flex: 1;
+      padding: 12px 16px;
+      margin-right: 8px;
+      font-size: 14px;
+    }
+  
+    #input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+  
+    #form > button {
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 24px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+  
+    #form > button:hover {
+      background: var(--primary-color-hover);
+    }
+  </style>
+  
+
+</head>
+
+<body>
+  <section id="chat">
+    <ul id="messages"></ul>
+    <form id="form">
+      <input type="text" name="message" id="input" placeholder="Type a message" autocomplete="off" />
+      <button type="submit">Enviar</button>
+    </form>
+  </section>
+
+</body>
+
+</html>
