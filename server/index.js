@@ -25,7 +25,9 @@ await db.execute(`
   CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     content TEXT,
-    user TEXT
+    user TEXT,
+    date TEXT,
+    time TEXT
   )
 `)
 
@@ -39,18 +41,21 @@ io.on('connection', async (socket) => {
   socket.on('chat message', async (msg) => {
     let result
     const username = socket.handshake.auth.username ?? 'anonymous'
+    const timestamp = new Date()
+    const date = timestamp.toISOString().split('T')[0] // YYYY-MM-DD
+    const time = timestamp.toTimeString().split(' ')[0] // HH:MM:SS
     console.log({ username })
     try {
       result = await db.execute({
-        sql: 'INSERT INTO messages (content, user) VALUES (:msg, :username)',
-        args: { msg, username }
+        sql: 'INSERT INTO messages (content, user, date, time) VALUES (:msg, :username , :date, :time)',
+        args: { msg, username, date, time }
       })
     } catch (e) {
       console.error(e)
       return
     }
 
-    io.emit('chat message', msg, result.lastInsertRowid.toString(), username)
+    io.emit('chat message', msg, result.lastInsertRowid.toString(), username, date, time)
   })
 
   if (!socket.recovered) { // <- recuperase los mensajes sin conexión
@@ -61,7 +66,7 @@ io.on('connection', async (socket) => {
       })
 
       results.rows.forEach(row => {
-        socket.emit('chat message', row.content, row.id.toString(), row.user)
+        socket.emit('chat message', row.content, row.id.toString(), row.user, row.date, row.time)
       })
     } catch (e) {
       console.error(e)
